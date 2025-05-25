@@ -1,0 +1,43 @@
+{
+  "name": "ultranx-server",
+  "version": "1.0.0",
+  "description": "Servidor Fastify com Prisma e PostgreSQL",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soaresgus/ULTRANX-SERVER.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/soaresgus/ULTRANX-SERVER/issues"
+  },
+  "homepage": "https://github.com/soaresgus/ULTRANX-SERVER#readme",
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.3.3",
+    "fastify-cors": "^6.0.3",
+    "fastify-helmet": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@typescript-eslint/eslint-plugin": "^6.7.2",
+    "@typescript-eslint/parser": "^6.7.2",
+    "eslint": "^8.57.0",
+    "prisma": "^6.8.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
