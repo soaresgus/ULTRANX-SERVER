@@ -1,8 +1,18 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
+import { authMiddleware } from './middleware/authMiddleware';
+import { authRoutes } from './routes/authRoutes';
 
 const fastify = Fastify({ logger: true });
 
 const port = 5577;
+
+export async function apiRoutes(fastify: FastifyInstance) {
+  fastify.addHook('preHandler', authMiddleware);
+
+  await authRoutes(fastify);
+}
+
+fastify.register(apiRoutes, { prefix: '/api' });
 
 const start = async () => {
   try {
