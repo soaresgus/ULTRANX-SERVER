@@ -20,9 +20,18 @@ export const UserSchema = z.object({
   passwordHash: z.string().min(1),
   nameWithSurname: z.string().optional(),
   userKey: z.string().optional(),
+  active: z.boolean().default(true),
   createdAt: z.date(),
   updatedAt: z.date(),
   sessions: z.array(z.string()).optional(), // Relacionamento com Session
+});
+
+export const UpdateUserSchema = z.object({
+  firstName: z.string().optional(),
+  surname: z.string().optional(),
+  email: z.string().email().optional(),
+  active: z.boolean().optional(),
+  userKey: z.string().optional(),
 });
 
 export const SessionSchema = z.object({

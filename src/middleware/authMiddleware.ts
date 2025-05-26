@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { verify } from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
-import { UserSchema } from '../schema/authSchema';
+import { UserSchema } from '../schema/userSchema';
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
   const authHeader = req.headers.authorization;

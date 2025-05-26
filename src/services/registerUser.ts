@@ -13,6 +13,15 @@ export async function registerUser(
 
   const passwordHash = await hashPassword(password);
 
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    console.error(`User with email ${email} already exists.`);
+    throw new Error('User already exists');
+  }
+
   await prisma.user.create({
     data: {
       email,

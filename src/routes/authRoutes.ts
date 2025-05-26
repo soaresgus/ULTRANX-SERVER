@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { loginUser } from '../auth/authService';
-import { LoginSchema } from '../schema/authSchema';
+import { LoginSchema } from '../schema/userSchema';
 
 export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(

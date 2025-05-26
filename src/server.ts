@@ -1,7 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import { authMiddleware } from './middleware/authMiddleware';
 import { authRoutes } from './routes/authRoutes';
-import { registerRoutes } from './routes/registerRoutes';
+import { userRoutes } from './routes/userRoutes';
 
 const fastify = Fastify({ logger: true });
 
@@ -13,7 +13,7 @@ export async function apiRoutes(fastify: FastifyInstance) {
 
 export async function apiAuthRoutes(fastify: FastifyInstance) {
   fastify.register(authRoutes);
-  fastify.register(registerRoutes);
+  fastify.register(userRoutes);
 }
 
 fastify.register(apiRoutes, { prefix: '/api' });
