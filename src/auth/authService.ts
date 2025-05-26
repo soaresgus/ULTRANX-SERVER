@@ -1,14 +1,16 @@
-import { verify, sign } from 'jsonwebtoken';
+import { sign } from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
+import bcrypt from 'bcrypt';
 
-async function loginUser(
+export async function loginUser(
   email: string,
   password: string,
   userAgent: string,
   ipAddress: string
 ) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.password !== password)
+
+  if (!user || !(await bcrypt.compare(password, user.passwordHash)))
     throw new Error('Credenciais inválidas');
 
   const accessToken = sign({ userId: user.id }, 'ACCESS_SECRET', {
@@ -17,6 +19,22 @@ async function loginUser(
   const refreshToken = sign({ userId: user.id }, 'REFRESH_SECRET', {
     expiresIn: '7d',
   });
+
+  const existingSession = await prisma.session.findFirst({
+    where: { userId: user.id, userAgent, ipAddress },
+  });
+
+  if (existingSession) {
+    await prisma.session.update({
+      where: { id: existingSession.id },
+      data: {
+        accessToken,
+        refreshToken,
+        tokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+    return { accessToken, refreshToken, sessionId: existingSession.id };
+  }
 
   const session = await prisma.session.create({
     data: {
@@ -32,31 +50,11 @@ async function loginUser(
   return { accessToken, refreshToken, sessionId: session.id };
 }
 
-async function refreshAccessToken(refreshToken: string) {
-  const decoded = verify(refreshToken, 'REFRESH_SECRET');
-  const session = await prisma.session.findFirst({ where: { refreshToken } });
-
-  if (
-    !session ||
-    typeof decoded !== 'object' ||
-    decoded === null ||
-    !('userId' in decoded) ||
-    session.userId !== (decoded as any).userId
-  )
-    throw new Error('Token inválido');
-
-  const newAccessToken = sign({ userId: session.userId }, 'ACCESS_SECRET', {
-    expiresIn: '15m',
-  });
-
-  await prisma.session.update({
-    where: { id: session.id },
-    data: { tokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000) },
-  });
-
-  return { accessToken: newAccessToken };
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
 }
 
-async function logout(sessionId: string) {
+export async function logout(sessionId: string) {
   await prisma.session.delete({ where: { id: sessionId } });
 }

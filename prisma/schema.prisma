@@ -19,6 +19,7 @@ model User {
   email           String   @unique
   firstName       String
   surname         String
+  passwordHash    String
   nameWithSurname String?  @default("")
   userKey         String?  @default("")
   createdAt       DateTime @default(now())

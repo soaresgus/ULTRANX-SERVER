@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import { authMiddleware } from './middleware/authMiddleware';
 import { authRoutes } from './routes/authRoutes';
+import { registerRoutes } from './routes/registerRoutes';
 
 const fastify = Fastify({ logger: true });
 
@@ -8,11 +9,15 @@ const port = 5577;
 
 export async function apiRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', authMiddleware);
+}
 
-  await authRoutes(fastify);
+export async function apiAuthRoutes(fastify: FastifyInstance) {
+  fastify.register(authRoutes);
+  fastify.register(registerRoutes);
 }
 
 fastify.register(apiRoutes, { prefix: '/api' });
+fastify.register(apiAuthRoutes, { prefix: '/api/auth' });
 
 const start = async () => {
   try {
