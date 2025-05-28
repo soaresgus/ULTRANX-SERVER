@@ -55,4 +55,45 @@ export async function userRoutes(fastify: FastifyInstance) {
 
     return reply.send({ message: 'User updated successfully', id });
   });
+
+  fastify.get('/users', async (request, reply) => {
+    const { page = 1, limit = 10 } = request.query as {
+      page?: string | number;
+      limit?: string | number;
+    };
+    const pageNumber = Number(page) > 0 ? Number(page) : 1;
+    const limitNumber = Number(limit) > 0 ? Number(limit) : 10;
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limitNumber,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count(),
+    ]);
+
+    return reply.send({
+      users,
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    });
+  });
+
+  fastify.get('/user/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return reply.status(404).send({ message: 'User not found' });
+    }
+
+    return reply.send(user);
+  });
 }
