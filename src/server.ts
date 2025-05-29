@@ -2,12 +2,20 @@ import Fastify, { FastifyInstance } from 'fastify';
 import { authMiddleware } from './middleware/authMiddleware';
 import { authRoutes } from './routes/authRoutes';
 import { userRoutes } from './routes/userRoutes';
+import cors from '@fastify/cors';
 
 const fastify = Fastify({ logger: true });
 
 const port = 5577;
 
-export async function apiRoutes(fastify: FastifyInstance) {
+// Habilitando CORS
+fastify.register(cors, {
+  origin: '*', // ⚠️ Permite todas as origens (ideal para testes, mas não para produção)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+
+export async function apiRoutesMiddleware(fastify: FastifyInstance) {
   fastify.addHook('preHandler', authMiddleware);
 }
 
@@ -16,7 +24,7 @@ export async function apiAuthRoutes(fastify: FastifyInstance) {
   fastify.register(userRoutes);
 }
 
-fastify.register(apiRoutes, { prefix: '/api' });
+fastify.register(apiRoutesMiddleware, { prefix: '/api' });
 fastify.register(apiAuthRoutes, { prefix: '/api/auth' });
 
 const start = async () => {

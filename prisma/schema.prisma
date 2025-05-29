@@ -23,6 +23,7 @@ model User {
   nameWithSurname String?  @default("")
   userKey         String?  @default("")
   active          Boolean  @default(true)
+  isFirstLogin    Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -41,4 +42,12 @@ model Session {
   updatedAt      DateTime @updatedAt
 
   User User @relation(fields: [userId], references: [id])
+}
+
+model Verification {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
