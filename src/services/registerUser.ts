@@ -19,7 +19,7 @@ export async function registerUser(
 
   if (existingUser) {
     console.error(`User with email ${email} already exists.`);
-    throw new Error('User already exists');
+    throw new Error('Já existe um usuário com este email.');
   }
 
   await prisma.user.create({
@@ -35,7 +35,7 @@ export async function registerUser(
   console.log(`User registered successfully: ${email}`);
 
   return {
-    message: 'User registered successfully',
+    message: 'Usuário registrado com sucesso',
     email,
     firstName,
     surname,

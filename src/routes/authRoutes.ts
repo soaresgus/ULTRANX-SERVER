@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { loginUser } from '../auth/authService';
 import { LoginSchema } from '../schema/userSchema';
 import { prisma } from '../lib/prisma';
@@ -136,5 +136,30 @@ export async function authRoutes(fastify: FastifyInstance) {
       success: true,
       message: 'Código verificado com sucesso!',
     });
+  });
+
+  fastify.post('/user-exists', async (request, reply) => {
+    const emailSchema = z.object({
+      email: z.string().email({ message: 'Email inválido' }),
+    });
+
+    const validation = emailSchema.safeParse(request.body);
+    if (!validation.success) {
+      return reply
+        .status(400)
+        .send({ success: false, message: validation.error.errors });
+    }
+
+    const { email } = validation.data;
+
+    const userExists = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (userExists) {
+      return reply.send({ exists: true });
+    } else {
+      return reply.send({ exists: false });
+    }
   });
 }

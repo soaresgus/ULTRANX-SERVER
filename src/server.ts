@@ -3,6 +3,7 @@ import { authMiddleware } from './middleware/authMiddleware';
 import { authRoutes } from './routes/authRoutes';
 import { userRoutes } from './routes/userRoutes';
 import cors from '@fastify/cors';
+import { registerRoute } from './routes/registerRoute';
 
 const fastify = Fastify({ logger: true });
 
@@ -17,11 +18,12 @@ fastify.register(cors, {
 
 export async function apiRoutesMiddleware(fastify: FastifyInstance) {
   fastify.addHook('preHandler', authMiddleware);
+  fastify.register(userRoutes);
 }
 
 export async function apiAuthRoutes(fastify: FastifyInstance) {
   fastify.register(authRoutes);
-  fastify.register(userRoutes);
+  fastify.register(registerRoute);
 }
 
 fastify.register(apiRoutesMiddleware, { prefix: '/api' });
