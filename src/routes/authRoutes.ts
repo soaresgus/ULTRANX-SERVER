@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma';
 import nodemailer from 'nodemailer';
 import { z } from 'zod';
 import { verificationTemplate } from '../emails/verification';
+import { forgotPasswordTemplate } from '../emails/forgotPassword';
+import bcrypt from 'bcrypt';
 
 export async function authRoutes(fastify: FastifyInstance) {
   fastify.post('/login', async (request, reply) => {
@@ -38,69 +40,80 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   });
 
-  fastify.post('/send-verification', async (request, reply) => {
-    try {
-      const emailSchema = z.object({
-        email: z.string().email({ message: 'Email inválido' }),
-      });
-
-      const validation = emailSchema.safeParse(request.body);
-
-      if (!validation.success) {
-        return reply
-          .status(400)
-          .send({ success: false, message: validation.error.errors });
-      }
-
-      const { email } = validation.data;
-
-      if (!email) {
-        return reply
-          .status(400)
-          .send({ success: false, message: 'O campo email é obrigatório.' });
-      }
-
-      // Gera um código aleatório de 6 dígitos
-      const verificationCode = Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-      // Define a expiração para 15 minutos a partir do envio
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-      // Insere o registro no banco de dados
-      await prisma.verification.create({
-        data: {
-          email,
-          code: verificationCode,
-          expiresAt,
+  fastify.post(
+    '/send-verification',
+    {
+      config: {
+        rateLimit: {
+          max: 5, // Número máximo de requisições permitidas
+          timeWindow: '5 minute', // Janela de tempo para o limite (1 minuto)
         },
-      });
+      },
+    },
+    async (request, reply) => {
+      try {
+        const emailSchema = z.object({
+          email: z.string().email({ message: 'Email inválido' }),
+        });
 
-      // Configura as opções do email
-      const mailOptions = {
-        from: process.env.GMAIL_USER,
-        to: email,
-        subject: 'Seu Código de Verificação',
-        html: verificationTemplate.replace(
-          '$verificationCode',
-          verificationCode
-        ),
-      };
+        const validation = emailSchema.safeParse(request.body);
 
-      // Envia o email
-      await transporter.sendMail(mailOptions);
+        if (!validation.success) {
+          return reply
+            .status(400)
+            .send({ success: false, message: validation.error.errors });
+        }
 
-      return reply.send({
-        success: true,
-        message: 'Código enviado! Verifique seu email.',
-      });
-    } catch (error) {
-      fastify.log.error(error);
-      return reply
-        .status(500)
-        .send({ success: false, message: 'Ocorreu um erro interno.' });
+        const { email } = validation.data;
+
+        if (!email) {
+          return reply
+            .status(400)
+            .send({ success: false, message: 'O campo email é obrigatório.' });
+        }
+
+        // Gera um código aleatório de 6 dígitos
+        const verificationCode = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString();
+        // Define a expiração para 15 minutos a partir do envio
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        // Insere o registro no banco de dados
+        await prisma.verification.create({
+          data: {
+            email,
+            code: verificationCode,
+            expiresAt,
+          },
+        });
+
+        // Configura as opções do email
+        const mailOptions = {
+          from: process.env.GMAIL_USER,
+          to: email,
+          subject: 'Seu Código de Verificação',
+          html: verificationTemplate.replace(
+            '$verificationCode',
+            verificationCode
+          ),
+        };
+
+        // Envia o email
+        await transporter.sendMail(mailOptions);
+
+        return reply.send({
+          success: true,
+          message: 'Código enviado! Verifique seu email.',
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply
+          .status(500)
+          .send({ success: false, message: 'Ocorreu um erro interno.' });
+      }
     }
-  });
+  );
 
   fastify.post('/verify-code', async (request, reply) => {
     const verificationSchema = z.object({
@@ -132,6 +145,10 @@ export async function authRoutes(fastify: FastifyInstance) {
         .send({ success: false, message: 'Código inválido ou expirado.' });
     }
 
+    await prisma.verification.delete({
+      where: { id: verificationRecord.id },
+    });
+
     return reply.send({
       success: true,
       message: 'Código verificado com sucesso!',
@@ -160,6 +177,137 @@ export async function authRoutes(fastify: FastifyInstance) {
       return reply.send({ exists: true });
     } else {
       return reply.send({ exists: false });
+    }
+  });
+
+  fastify.post(
+    '/forgot-password',
+    {
+      config: {
+        rateLimit: {
+          max: 5, // Número máximo de requisições permitidas
+          timeWindow: '5 minute', // Janela de tempo para o limite (1 minuto)
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const emailSchema = z.object({
+          email: z.string().email({ message: 'Email inválido' }),
+        });
+
+        const validation = emailSchema.safeParse(request.body);
+
+        if (!validation.success) {
+          return reply
+            .status(400)
+            .send({ success: false, message: validation.error.errors });
+        }
+
+        const { email } = validation.data;
+
+        // Gera um código aleatório de 6 dígitos
+        const verificationCode = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString();
+        // Define a expiração para 15 minutos a partir do envio
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (user) {
+          // Insere o registro no banco de dados
+          await prisma.verification.create({
+            data: {
+              email,
+              code: verificationCode,
+              expiresAt,
+            },
+          });
+
+          // Configura as opções do email
+          const mailOptions = {
+            from: process.env.GMAIL_USER,
+            to: email,
+            subject: 'Esqueci minha senha - ULTRA NX',
+            html: forgotPasswordTemplate.replace(
+              '$verificationCode',
+              verificationCode
+            ),
+          };
+
+          // Envia o email
+          await transporter.sendMail(mailOptions);
+        }
+
+        return reply.send({
+          success: true,
+          message: 'Código enviado! Verifique seu email.',
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply
+          .status(500)
+          .send({ success: false, message: 'Ocorreu um erro interno.' });
+      }
+    }
+  );
+
+  fastify.post('/reset-password', async (request, reply) => {
+    try {
+      const resetPasswordSchema = z.object({
+        email: z.string().email({ message: 'Email inválido' }),
+        code: z.string().length(6, { message: 'Código deve ter 6 dígitos' }),
+        newPassword: z.string().min(6, { message: 'Senha muito curta' }),
+      });
+
+      const validation = resetPasswordSchema.safeParse(request.body);
+      if (!validation.success) {
+        return reply
+          .status(400)
+          .send({ success: false, message: validation.error.errors });
+      }
+
+      const { email, code, newPassword } = validation.data;
+
+      const verificationRecord = await prisma.verification.findFirst({
+        where: {
+          email,
+          code,
+          expiresAt: {
+            gte: new Date(), // Verifica se o código ainda é válido
+          },
+        },
+      });
+
+      if (!verificationRecord) {
+        return reply
+          .status(400)
+          .send({ success: false, message: 'Código inválido ou expirado.' });
+      }
+
+      await prisma.verification.delete({
+        where: { id: verificationRecord.id },
+      });
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { email },
+        data: { passwordHash }, // Aqui você deve aplicar a hash na senha antes de salvar
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Senha redefinida com sucesso!',
+      });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply
+        .status(500)
+        .send({ success: false, message: 'Ocorreu um erro interno.' });
     }
   });
 }

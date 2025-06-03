@@ -12,7 +12,9 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
   const token = authHeader.split(' ')[1]; // "Bearer <token>"
 
   try {
-    const decoded = verify(token, 'ACCESS_SECRET') as { userId: string };
+    const decoded = verify(token, process.env.ACCESS_SECRET!) as {
+      userId: string;
+    };
 
     // Verifica se a sessão é válida no banco de dados
     const session = await prisma.session.findFirst({

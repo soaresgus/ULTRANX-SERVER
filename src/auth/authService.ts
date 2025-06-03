@@ -15,10 +15,10 @@ export async function loginUser(
 
   // TODO: Create a secrete for both tokens on .env file
 
-  const accessToken = sign({ userId: user.id }, 'ACCESS_SECRET', {
+  const accessToken = sign({ userId: user.id }, process.env.ACCESS_SECRET!, {
     expiresIn: '15m',
   });
-  const refreshToken = sign({ userId: user.id }, 'REFRESH_SECRET', {
+  const refreshToken = sign({ userId: user.id }, process.env.REFRESH_SECRET!, {
     expiresIn: '7d',
   });
 

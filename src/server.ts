@@ -4,6 +4,7 @@ import { authRoutes } from './routes/authRoutes';
 import { userRoutes } from './routes/userRoutes';
 import cors from '@fastify/cors';
 import { registerRoute } from './routes/registerRoute';
+import fastifyRateLimit from '@fastify/rate-limit';
 
 const fastify = Fastify({ logger: true });
 
@@ -14,6 +15,10 @@ fastify.register(cors, {
   origin: '*', // ⚠️ Permite todas as origens (ideal para testes, mas não para produção)
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+});
+
+fastify.register(fastifyRateLimit, {
+  global: false, // Desativa o rate limit global para que cada rota tenha sua própria configuração
 });
 
 export async function apiRoutesMiddleware(fastify: FastifyInstance) {
