@@ -8,6 +8,12 @@ export async function userRoutes(fastify: FastifyInstance) {
     const { active, email, firstName, surname, userKey } =
       UpdateUserSchema.parse(request.body);
 
+    const userId = request.user?.id;
+
+    if (userId !== id) {
+      return reply.status(403).send({ message: 'Access denied.' });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
     });
@@ -36,7 +42,7 @@ export async function userRoutes(fastify: FastifyInstance) {
     return reply.send({ message: 'User updated successfully', id });
   });
 
-  fastify.get('/users', async (request, reply) => {
+  /* fastify.get('/users', async (request, reply) => {
     const { page = 1, limit = 10 } = request.query as {
       page?: string | number;
       limit?: string | number;
@@ -61,10 +67,16 @@ export async function userRoutes(fastify: FastifyInstance) {
       total,
       totalPages: Math.ceil(total / limitNumber),
     });
-  });
+  }); */
 
   fastify.get('/user/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+
+    const userId = request.user?.id;
+
+    if (userId !== id) {
+      return reply.status(403).send({ message: 'Access denied.' });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -79,6 +91,12 @@ export async function userRoutes(fastify: FastifyInstance) {
 
   fastify.delete('/user/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+
+    const userId = request.user?.id;
+
+    if (userId !== id) {
+      return reply.status(403).send({ message: 'Access denied.' });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id },

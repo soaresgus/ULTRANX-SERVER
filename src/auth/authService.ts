@@ -13,8 +13,6 @@ export async function loginUser(
   if (!user || !(await bcrypt.compare(password, user.passwordHash)))
     throw new Error('Credenciais inválidas');
 
-  // TODO: Create a secrete for both tokens on .env file
-
   const accessToken = sign({ userId: user.id }, process.env.ACCESS_SECRET!, {
     expiresIn: '15m',
   });

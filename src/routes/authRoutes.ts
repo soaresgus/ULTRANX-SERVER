@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { verificationTemplate } from '../emails/verification';
 import { forgotPasswordTemplate } from '../emails/forgotPassword';
 import bcrypt from 'bcrypt';
+import { verify, sign } from 'jsonwebtoken';
 
 export async function authRoutes(fastify: FastifyInstance) {
   fastify.post('/login', async (request, reply) => {
@@ -308,6 +309,41 @@ export async function authRoutes(fastify: FastifyInstance) {
       return reply
         .status(500)
         .send({ success: false, message: 'Ocorreu um erro interno.' });
+    }
+  });
+
+  fastify.post('/refresh-token', async (request, reply) => {
+    const { refreshToken } = request.body as { refreshToken: string };
+    if (!refreshToken) {
+      return reply.status(400).send({ message: 'Refresh token não fornecido' });
+    }
+
+    try {
+      const decoded = verify(refreshToken, process.env.REFRESH_SECRET!) as { userId: string };
+
+      const session = await prisma.session.findFirst({
+        where: { refreshToken },
+      });
+
+      if (!session) {
+        return reply.status(401).send({ message: 'Sessão inválida ou expirada' });
+      }
+
+      const newAccessToken = sign({ userId: decoded.userId }, process.env.ACCESS_SECRET!, {
+        expiresIn: '15m',
+      });
+
+      await prisma.session.update({
+        where: { id: session.id },
+        data: {
+          accessToken: newAccessToken,
+          tokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+
+      return reply.send({ accessToken: newAccessToken });
+    } catch (error) {
+      return reply.status(401).send({ message: 'Refresh token inválido ou expirado' });
     }
   });
 }
