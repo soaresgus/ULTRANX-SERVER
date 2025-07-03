@@ -116,6 +116,41 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   );
 
+  async function verifyCode(email: string, code: string): Promise<boolean> {
+    const verificationRecord = await prisma.verification.findFirst({
+      where: {
+        email,
+        code,
+        expiresAt: {
+          gte: new Date(), // Verifica se o código ainda é válido
+        },
+      },
+    });
+
+    const maxUses = 2;
+
+    if (!verificationRecord || verificationRecord.uses >= maxUses) {
+      return false
+    }
+
+    await prisma.verification.update({
+      where: {
+        id: verificationRecord.id,
+      },
+      data: {
+        uses: verificationRecord.uses + 1
+      }
+    })
+
+    if (verificationRecord.uses + 1 >= maxUses) {
+      await prisma.verification.delete({
+        where: { id: verificationRecord.id },
+      });
+    }
+
+    return true;
+  }
+
   fastify.post('/verify-code', async (request, reply) => {
     const verificationSchema = z.object({
       email: z.string().email({ message: 'Email inválido' }),
@@ -130,25 +165,14 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
 
     const { email, code } = validation.data;
-    const verificationRecord = await prisma.verification.findFirst({
-      where: {
-        email,
-        code,
-        expiresAt: {
-          gte: new Date(), // Verifica se o código ainda é válido
-        },
-      },
-    });
 
-    if (!verificationRecord) {
+    const codeVerified = await verifyCode(email, code);
+
+    if (!codeVerified) {
       return reply
         .status(400)
         .send({ success: false, message: 'Código inválido ou expirado.' });
     }
-
-    await prisma.verification.delete({
-      where: { id: verificationRecord.id },
-    });
 
     return reply.send({
       success: true,
@@ -273,25 +297,13 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const { email, code, newPassword } = validation.data;
 
-      const verificationRecord = await prisma.verification.findFirst({
-        where: {
-          email,
-          code,
-          expiresAt: {
-            gte: new Date(), // Verifica se o código ainda é válido
-          },
-        },
-      });
+      const codeVerified = await verifyCode(email, code)
 
-      if (!verificationRecord) {
+      if (!codeVerified) {
         return reply
           .status(400)
           .send({ success: false, message: 'Código inválido ou expirado.' });
       }
-
-      await prisma.verification.delete({
-        where: { id: verificationRecord.id },
-      });
 
       const passwordHash = await bcrypt.hash(newPassword, 10);
 
